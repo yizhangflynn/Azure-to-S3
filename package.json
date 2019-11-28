@@ -1,0 +1,35 @@
+{
+    "name": "azure-to-s3",
+    "version": "1.0.0",
+    "description": "migrate files from azure to s3",
+    "main": "index.js",
+    "scripts": {
+        "build": "webpack"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/yizhangflynn/Azure-to-S3.git"
+    },
+    "author": "Yi Zhang",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/yizhangflynn/Azure-to-S3/issues"
+    },
+    "homepage": "https://github.com/yizhangflynn/Azure-to-S3#readme",
+    "dependencies": {
+        "config": "^3.2.4",
+        "typescript": "^3.7.2"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.7.4",
+        "@babel/polyfill": "^7.7.0",
+        "@babel/preset-env": "^7.7.4",
+        "@types/config": "0.0.36",
+        "@types/typescript": "^2.0.0",
+        "babel-loader": "^8.0.6",
+        "ts-loader": "^6.2.1",
+        "ts-node": "^8.5.4",
+        "webpack": "^4.41.2",
+        "webpack-cli": "^3.3.10"
+    }
+}
