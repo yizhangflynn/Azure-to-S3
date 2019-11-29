@@ -43,54 +43,108 @@ var __asyncValues = (this && this.__asyncValues) || function (o) {
     function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
 };
 exports.__esModule = true;
-var config_1 = require("config");
+var AWS = require('aws-sdk');
 var storage_blob_1 = require("@azure/storage-blob");
-var azureConfig = config_1.get('azure');
-var azureCredential = new storage_blob_1.StorageSharedKeyCredential(azureConfig.account, azureConfig.key);
-var azureClient = new storage_blob_1.BlobServiceClient("https://" + azureConfig.account + ".blob.core.windows.net", azureCredential);
-function listAzureBlobsByContainer(name) {
+var config_1 = require("config");
+var sourceContainer = process.env.SOURCE_CONTAINER || config_1.get('sourceContainer');
+var targetBucket = process.env.TARGET_BUCKET || config_1.get('targetBucket');
+var azureBlobClient = getAzureBlobClient();
+var s3Client = new AWS.S3();
+var _a = config_1.get('aws'), region = _a.region, key = _a.key, secret = _a.secret;
+AWS.config.update({
+    region: region,
+    accessKeyId: key,
+    secretAccessKey: secret
+});
+function getAzureBlobClient() {
+    var _a = config_1.get('azure'), account = _a.account, key = _a.key;
+    var url = "https://" + account + ".blob.core.windows.net";
+    var credential = new storage_blob_1.StorageSharedKeyCredential(account, key);
+    return new storage_blob_1.BlobServiceClient(url, credential);
+}
+function downloadFromAzureBlob(container, blobName) {
+    return __awaiter(this, void 0, void 0, function () {
+        var downloaded;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, container.getBlobClient(blobName).download()];
+                case 1:
+                    downloaded = _a.sent();
+                    return [2 /*return*/, downloaded.readableStreamBody];
+            }
+        });
+    });
+}
+function uploadToS3(bucket, objectKey, file) {
+    return __awaiter(this, void 0, void 0, function () {
+        var payload;
+        return __generator(this, function (_a) {
+            payload = { Bucket: bucket, Key: objectKey, Body: file };
+            return [2 /*return*/, new Promise(function (resolve, reject) {
+                    s3Client.upload(payload, function (error, data) {
+                        if (error) {
+                            reject("Failed to upload " + objectKey + " into bucket " + bucket + ". Error: " + error.name + ", message: " + error.message + ".");
+                        }
+                        if (data) {
+                            resolve("Successfully uploaded " + objectKey + " into bucket " + bucket + ".");
+                        }
+                        reject("Failed to upload " + objectKey + " into bucket " + bucket + ".");
+                    });
+                })];
+        });
+    });
+}
+function migrate(source, target) {
     var e_1, _a;
     return __awaiter(this, void 0, void 0, function () {
-        var container, blobs, blobs_1, blobs_1_1, blob, e_1_1;
+        var container, blobs, blobs_1, blobs_1_1, blob, file, delimiter, objectKey, result, e_1_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    container = azureClient.getContainerClient(name);
+                    container = azureBlobClient.getContainerClient(source);
                     return [4 /*yield*/, container.listBlobsFlat()];
                 case 1:
                     blobs = _b.sent();
                     _b.label = 2;
                 case 2:
-                    _b.trys.push([2, 7, 8, 13]);
+                    _b.trys.push([2, 9, 10, 15]);
                     blobs_1 = __asyncValues(blobs);
                     _b.label = 3;
                 case 3: return [4 /*yield*/, blobs_1.next()];
                 case 4:
-                    if (!(blobs_1_1 = _b.sent(), !blobs_1_1.done)) return [3 /*break*/, 6];
+                    if (!(blobs_1_1 = _b.sent(), !blobs_1_1.done)) return [3 /*break*/, 8];
                     blob = blobs_1_1.value;
-                    console.log(blob.name);
-                    _b.label = 5;
-                case 5: return [3 /*break*/, 3];
-                case 6: return [3 /*break*/, 13];
-                case 7:
+                    return [4 /*yield*/, downloadFromAzureBlob(container, blob.name)];
+                case 5:
+                    file = _b.sent();
+                    delimiter = blob.name[0] === '/' ? '' : '/';
+                    objectKey = "" + source + delimiter + blob.name;
+                    return [4 /*yield*/, uploadToS3(target, objectKey, file)];
+                case 6:
+                    result = _b.sent();
+                    console.log(result + "\n");
+                    _b.label = 7;
+                case 7: return [3 /*break*/, 3];
+                case 8: return [3 /*break*/, 15];
+                case 9:
                     e_1_1 = _b.sent();
                     e_1 = { error: e_1_1 };
-                    return [3 /*break*/, 13];
-                case 8:
-                    _b.trys.push([8, , 11, 12]);
-                    if (!(blobs_1_1 && !blobs_1_1.done && (_a = blobs_1["return"]))) return [3 /*break*/, 10];
+                    return [3 /*break*/, 15];
+                case 10:
+                    _b.trys.push([10, , 13, 14]);
+                    if (!(blobs_1_1 && !blobs_1_1.done && (_a = blobs_1["return"]))) return [3 /*break*/, 12];
                     return [4 /*yield*/, _a.call(blobs_1)];
-                case 9:
-                    _b.sent();
-                    _b.label = 10;
-                case 10: return [3 /*break*/, 12];
                 case 11:
+                    _b.sent();
+                    _b.label = 12;
+                case 12: return [3 /*break*/, 14];
+                case 13:
                     if (e_1) throw e_1.error;
                     return [7 /*endfinally*/];
-                case 12: return [7 /*endfinally*/];
-                case 13: return [2 /*return*/];
+                case 14: return [7 /*endfinally*/];
+                case 15: return [2 /*return*/];
             }
         });
     });
 }
-listAzureBlobsByContainer('attachments')["catch"](function (error) { return console.log(error); });
+migrate(sourceContainer, targetBucket);
